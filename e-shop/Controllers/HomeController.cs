@@ -88,10 +88,10 @@ namespace e_shop.Controllers
 
 
         //for register
-        [HttpPost]
+ 
         public IActionResult Register(string txtName, string txtEmail, string txtPass, string txtCPass, bool acceptTerms)
         {
-            if (acceptTerms!=true)
+            if (acceptTerms==true)
             {
                 TempData["Title"] = "Error";
                 TempData["Message"] = "You must accept the terms and conditions to register.";
