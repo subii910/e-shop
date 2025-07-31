@@ -1,0 +1,161 @@
+﻿@model IEnumerable<e_shop.Models.CartItem>
+
+
+@{
+    Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
+
+
+    decimal? prtotal = 0;
+}
+
+
+
+<!-- Page Header Start -->
+<div class="container-fluid bg-secondary mb-5">
+    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 300px">
+        <h1 class="font-weight-semi-bold text-uppercase mb-3">Shopping Cart</h1>
+        <div class="d-inline-flex">
+            <p class="m-0"><a href="/Home">Home</a></p>
+            <p class="m-0 px-2">-</p>
+            <p class="m-0">Shopping Cart</p>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+<!-- Cart Start -->
+<div class="container-fluid pt-5">
+    <div class="row px-xl-5">
+        <div class="col-lg-8 table-responsive mb-5">
+            <table class="table table-bordered text-center mb-0">
+                <thead class="bg-secondary text-dark">
+                    <tr>
+                        <th>Products</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Total</th>
+                        <th>Remove</th>
+                    </tr>
+                </thead>
+                <tbody class="align-middle">
+
+                    @if (Model.Count() < 1)
+                    {
+                        <h3>
+                            No item in your cart
+                        </h3>
+                        <a href="/Home/Products"><button class="btn btn-primary float-right">Add products</button> </a>
+                    }
+                    else
+                    {
+
+
+
+                        @foreach (var item in Model)
+                        {
+                           
+                           
+                            <tr>
+                                <td class="align-middle"><img src="/DataFiles/products/@item.product.Image" alt="" style="width: 50px;"> @item.product.ProductName</td>
+                                <td class="align-middle">$@item.product.Srice</td>
+                                <td class="align-middle">
+                                    <div class="input-group quantity mx-auto" style="width: 100px;">
+                                      @*  <div class="input-group-btn">
+                                            <button class="btn btn-sm btn-primary btn-minus">
+                                                <i class="fa fa-minus"></i>
+                                            </button>
+                                        </div>*@
+                                        <input type="number"
+                                               class="quantity-input"
+                                               value="@item.quantity"
+                                               data-price="@item.product.Srice"
+                                               min="1"
+                                               style="width: 60px; text-align: center;" />
+
+                                        @* <div class="input-group-btn">
+                                            <button class="btn btn-sm btn-primary btn-plus">
+                                                <i class="fa fa-plus"></i>
+                                            </button>
+                                        </div> *@
+                                    </div>
+
+                                </td>
+                                <td class="item-total  align-middle">
+                                    $@((item.product.Srice * item.quantity))
+                                </td>
+                                <td class="align-middle">
+                                    <a class="btn btn-sm btn-primary" href="/Home/Remove/@item.product.ProductId">
+                                        <i class="fa fa-times"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            prtotal += item.product.Srice * item.quantity;
+                        }
+
+                    }
+
+                </tbody>
+            </table>
+        </div>
+        <div class="col-lg-4">
+         
+            <div class="card border-secondary mb-5">
+                <div class="card-footer border-secondary bg-transparent">
+                    <div class="d-flex justify-content-between mt-2">
+                        <h5 class="font-weight-bold">Total</h5>
+                        <h5 class="font-weight-bold grand-total">@prtotal</h5>
+                    </div>
+                    <a href="/Home/Products"> <button class="btn btn-block btn-primary my-3 py-3">Continue Shopping</button></a>
+                    <a href="#"> <button class="btn btn-block btn-primary my-3 py-3">Proceed To Checkout</button></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Cart End -->
+
+
+<script>
+    document.querySelectorAll('.quantity-input').forEach(function(input) {
+        input.addEventListener('input', function () {
+            const quantity = parseInt(this.value) || 0;
+            const price = parseFloat(this.dataset.price);
+
+            // Get the nearest "Total" cell
+            const totalTd = this.closest('tr').querySelector('.item-total');
+
+            // Calculate total
+            const total = quantity * price;
+
+            // Update total cell text
+            totalTd.textContent = "$" + total.toFixed(2);
+        });
+    });
+</script>
+
+<script>
+    function updateGrandTotal() {
+        let grandTotal = 0;
+        document.querySelectorAll('.item-total').forEach(function (cell) {
+            const amount = parseFloat(cell.textContent.replace(/[^\d.]/g, '')) || 0;
+            grandTotal += amount;
+        });
+
+        // Update the grand total (Rs optional if you want to prepend it)
+        document.querySelector('.grand-total').textContent = grandTotal.toFixed(2);
+    }
+
+    document.querySelectorAll('.quantity-input').forEach(function(input) {
+        input.addEventListener('input', function () {
+            const quantity = parseInt(this.value) || 0;
+            const price = parseFloat(this.dataset.price);
+            const total = quantity * price;
+
+            // Update this row's total
+            const totalTd = this.closest('tr').querySelector('.item-total');
+            totalTd.textContent = "$" + total.toFixed(2);
+
+            // Update grand total
+            updateGrandTotal();
+        });
+    });
+</script>

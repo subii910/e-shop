@@ -1,0 +1,206 @@
+﻿@model e_shop.Models.ViewModel.IndexViewModel
+
+
+ <!-- Featured Start -->
+<div class="container-fluid pt-5">
+    <div class="text-center mb-4">
+        <h2 class="section-title px-5"><span class="px-2">Services</span></h2>
+    </div>
+    
+    <div class="row px-xl-5 pb-3">
+
+
+        <div class="col-lg-3 col-md-6 col-sm-12 pb-1">
+            <div class="d-flex align-items-center border mb-4" style="padding: 30px;">
+                <h1 class="fa fa-check text-primary m-0 mr-3"></h1>
+                <h5 class="font-weight-semi-bold m-0">Quality Product</h5>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12 pb-1">
+            <div class="d-flex align-items-center border mb-4" style="padding: 30px;">
+                <h1 class="fa fa-shipping-fast text-primary m-0 mr-2"></h1>
+                <h5 class="font-weight-semi-bold m-0">Free Shipping</h5>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12 pb-1">
+            <div class="d-flex align-items-center border mb-4" style="padding: 30px;">
+                <h1 class="fas fa-exchange-alt text-primary m-0 mr-3"></h1>
+                <h5 class="font-weight-semi-bold m-0">14-Day Return</h5>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12 pb-1">
+            <div class="d-flex align-items-center border mb-4" style="padding: 30px;">
+                <h1 class="fa fa-phone-volume text-primary m-0 mr-3"></h1>
+                <h5 class="font-weight-semi-bold m-0">24/7 Support</h5>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Featured End -->
+
+
+
+
+
+<!-- Categories Start -->
+<div class="container-fluid pt-5">
+    <div class="text-center mb-4">
+        <h2 class="section-title px-5"><span class="px-2">Categories</span></h2>
+    </div>
+    <div class="row px-xl-5 pb-3">
+            @foreach (var item in Model.Categories)
+        {
+    
+         
+        
+            <div class="col-lg-3 col-md-6 col-sm-12 pb-1" style="border:1px solid black ;margin:10px">
+                <div class="card  product-item border-0 ">
+                    <div class="card-header product-img position-relative overflow-hidden bg-transparent border p-0">
+                        <img style="height:200px" class="img-fluid w-100" src="/DataFiles/category/@item.Image" alt="">
+                    </div>
+                    <div class="card-body" style="margin:8px; padding:8px;">
+
+                        <h4 class="text-center">@item.Name </h4>
+                        <hr />
+                        <table>
+                            <tr>
+                                <td>Details: </td>
+                                <td>@item.Details</td>
+                            </tr>
+                            <tr>
+                                <td>Status: </td>
+                                <td>@item.Status</td>
+                            </tr>
+
+
+
+
+                        </table>
+                        <div class="card-footer d-flex justify-content-between bg-light border">
+                            <a href="/Home/Products/@item.CategoryId" class="btn btn-sm text-dark p-0"><i class="fas fa-eye text-primary mr-1"></i>View Products</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+       
+        }
+
+    </div>
+</div>
+<!-- Categories End -->
+
+
+<!-- Products Start -->
+<div class="container-fluid pt-5">
+    <div class="text-center mb-4">
+        <h2 class="section-title px-5"><span class="px-2">Products</span></h2>
+    </div>
+    <div class="row pb-3">
+        @foreach (var item in Model.Products)
+        {
+        
+         
+                <div class="col-lg-3 col-md-6 col-sm-12 pb-1" style="border:1px solid black ;margin:10px">
+                    <div class="card  product-item border-0 ">
+                        <div class="card-header product-img position-relative overflow-hidden bg-transparent border p-0">
+                            <img style="height:200px" class="img-fluid w-100" src="/DataFiles/products/@item.Image" alt="">
+                        </div>
+                        <div class="card-body" style="margin:8px; padding:8px;">
+
+                            <h4 class="text-center">@item.ProductName </h4>
+                            <hr />
+                            <table>
+
+                                <tr>
+                                    <td>Category: </td>
+                                    <td>@item.CategoryF.Name</td>
+                                </tr>
+
+                                @* <tr>
+                                    <td>Brand: </td>
+                                    <td>@item.BrandF.Name</td>
+                                </tr> *@
+
+
+                                <tr>
+                                    <td>Details: </td>
+                                    <td>@item.Details</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Qty: </td>
+                                    <td>@item.StockQuantity</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Rating: </td>
+                                    <td>@item.Rating</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Status: </td>
+                                    <td>@item.Status</td>
+                                </tr>
+
+                                <tr>
+                                    <td>Price: </td>
+                                    <td>@item.Srice $</td>
+
+
+                                </tr>
+
+
+                            </table>
+                            <div class="card-footer d-flex justify-content-between bg-light border">
+                                <a href="/Home/Details/@item.ProductId" class="btn btn-sm text-dark p-0"><i class="fas fa-eye text-primary mr-1"></i>View Detail</a>
+                                <a href="/Home/AddTocart/@item.ProductId" class="btn btn-sm text-dark p-0"><i class="fas fa-shopping-cart text-primary mr-1"></i>Add To Cart</a>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+        
+            }
+       
+    </div>
+</div>
+<!-- Products End -->
+
+
+
+<!-- Vendor Start -->
+@* 
+<div class="container-fluid pt-5">
+    <div class="text-center mb-4">
+        <h2 class="section-title px-5"><span class="px-2">Brands</span></h2>
+    </div>
+    <div class="row pb-3">
+
+        @foreach (var item in Model.Brands)
+        {
+
+            <div class="col-lg-4 col-md-6 col-sm-12 pb-1">
+                <div class="card  product-item border-0 ">
+                    <div class="card-header product-img position-relative overflow-hidden bg-transparent border p-0">
+                        <a href="/Home/Products?brand=@item.BrandId"><img style="height:200px" class="img-fluid w-100" src="/DataFiles/brands/@item.Image" alt=""></a>
+                    </div>
+                    <div class="card-body" style="margin:8px; padding:8px;">
+                        <a href="/Home/Products?brand=@item.BrandId"><h4 class="text-center">@item.Name </h4></a>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+        }
+
+
+    </div>
+</div> *@
+<!-- Vendor End -->

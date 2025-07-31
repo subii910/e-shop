@@ -1,0 +1,89 @@
+﻿@model IEnumerable<e_shop.Models.Category>
+
+@{
+	Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
+}
+
+<!-- Page Header Start -->
+<div class="container-fluid bg-secondary mb-5">
+	<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 300px">
+		<h1 class="font-weight-semi-bold text-uppercase mb-3">Categories</h1>
+		<div class="d-inline-flex">
+			<p class="m-0"><a href="/Home">Home</a></p>
+			<p class="m-0 px-2">-</p>
+			<p class="m-0">Categories</p>
+		</div>
+	</div>
+</div>
+<!-- Page Header End -->
+<!-- Shop Start -->
+<div class="container-fluid pt-5">
+	<div class="row px-xl-5">
+
+
+		<!-- Shop Sidebar Start -->
+	
+		
+
+
+
+
+
+
+		<!-- Shop Product Start -->
+		<div class="col-lg-12 col-md-12">
+			<div class="row pb-3">
+				
+
+
+				<!--cards-->
+
+
+			@foreach(var item in Model)
+			{
+					<div class="col-lg-3 col-md-6 col-sm-12 pb-1" style="border:1px solid black ;margin:10px">
+						<div class="card  product-item border-0 ">
+							<div class="card-header product-img position-relative overflow-hidden bg-transparent border p-0">
+								<img style="height:200px" class="img-fluid w-100" src="/DataFiles/category/@item.Image" alt="">
+							</div>
+							<div class="card-body" style="margin:8px; padding:8px;">
+
+								<h4 class="text-center">@item.Name </h4>
+								<hr />
+								<table>
+									<tr>
+										<td>Details: </td>
+										<td>@item.Details</td>
+									</tr>
+									<tr>
+										<td>Status: </td>
+										<td>@item.Status</td>
+									</tr>
+
+									
+
+									
+								</table>
+								<div class="card-footer d-flex justify-content-between bg-light border">
+									<a href="/Home/Products/@item.CategoryId" class="btn btn-sm text-dark p-0"><i class="fas fa-eye text-primary mr-1"></i>View Products</a>
+								</div>
+							</div>
+
+						</div>
+					</div>
+
+				}
+				
+				
+
+
+
+				
+				
+				
+			</div>
+		</div>
+		<!-- Shop Product End -->
+	</div>
+</div>
+<!-- Shop End -->
