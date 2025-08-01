@@ -71,7 +71,7 @@ namespace e_shop.Controllers
             var user = db.Customers.FirstOrDefault(x => x.Email == txtEmail && x.Password == txtPass);
             if (user != null)
             {
-                AppState.LoggedInCustomer = user;
+                //AppState.LoggedInCustomer = user;
                 return RedirectToAction("Index", "Home");
             }
            
@@ -166,23 +166,31 @@ namespace e_shop.Controllers
         }
 
         //for checkout
-      public IActionResult Checkout()
-{
-    var model = new CheckoutViewModel
-    {
-        CartItems = HomeController.CartData ?? new List<CartItem>()
-    };
+        public IActionResult Checkout()
+        {
+            // Check if user is logged in
+            var userEmail = User.Identity?.Name;
 
-    if (AppState.LoggedInCustomer != null)
-    {
-        model.FullName = AppState.LoggedInCustomer.FullName;
-        model.Email = AppState.LoggedInCustomer.Email;
-        model.Phone = AppState.LoggedInCustomer.Phone;
-        model.Address = AppState.LoggedInCustomer.Address;
-    }
+            CheckoutViewModel model = new CheckoutViewModel
+            {
+                CartItems = HomeController.CartData ?? new List<CartItem>()
+            };
 
-    return View(model);
-}
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                // Fetch user info from DB using email
+                var user = db.Customers.FirstOrDefault(u => u.Email == userEmail);
+                if (user != null)
+                {
+                    model.FullName = user.FullName;
+                    model.Email = user.Email;
+                    model.Phone = user.Phone;
+                    model.Address = user.Address;
+                }
+            }
+
+            return View(model);
+        }
 
 
 
