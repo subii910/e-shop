@@ -1,0 +1,12 @@
+﻿@model e_shop.Models.ViewModel.CheckoutViewModel
+@{
+    Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
+}
+
+<h2>Payment Page</h2>
+<p>Total: @ViewBag.TotalAmount</p>
+
+<!-- Simulate success -->
+<form asp-action="ConfirmOrder" method="post">
+    <button type="submit">Simulate Payment Success</button>
+</form>

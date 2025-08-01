@@ -65,6 +65,7 @@
                                             </button>
                                         </div>*@
                                         <input type="number"
+                                               name="Quantities[@item.product.ProductId]"
                                                class="quantity-input"
                                                value="@item.quantity"
                                                data-price="@item.product.Srice"
@@ -105,7 +106,7 @@
                         <h5 class="font-weight-bold grand-total">@prtotal</h5>
                     </div>
                     <a href="/Home/Products"> <button class="btn btn-block btn-primary my-3 py-3">Continue Shopping</button></a>
-                    <a href="#"> <button class="btn btn-block btn-primary my-3 py-3">Proceed To Checkout</button></a>
+                    <a href="/Home/Checkout"> <button class="btn btn-block btn-primary my-3 py-3">Proceed To Checkout</button></a>
                 </div>
             </div>
         </div>

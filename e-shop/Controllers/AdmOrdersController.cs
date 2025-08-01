@@ -9,22 +9,23 @@ using e_shop.Models;
 
 namespace e_shop.Controllers
 {
-    public class UsersController : Controller
+    public class AdmOrdersController : Controller
     {
         private readonly Customerwebsite1Context _context;
 
-        public UsersController(Customerwebsite1Context context)
+        public AdmOrdersController(Customerwebsite1Context context)
         {
             _context = context;
         }
 
-        // GET: Users
+        // GET: AdmOrders
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Customers.ToListAsync());
+            var customerwebsite1Context = _context.Orders.Include(o => o.CustomerF);
+            return View(await customerwebsite1Context.ToListAsync());
         }
 
-        // GET: Users/Details/5
+        // GET: AdmOrders/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -32,39 +33,42 @@ namespace e_shop.Controllers
                 return NotFound();
             }
 
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.CustomerId == id);
-            if (customer == null)
+            var order = await _context.Orders
+                .Include(o => o.CustomerF)
+                .FirstOrDefaultAsync(m => m.OrderId == id);
+            if (order == null)
             {
                 return NotFound();
             }
 
-            return View(customer);
+            return View(order);
         }
 
-        // GET: Users/Create
+        // GET: AdmOrders/Create
         public IActionResult Create()
         {
+            ViewData["CustomerFid"] = new SelectList(_context.Customers, "CustomerId", "CustomerId");
             return View();
         }
 
-        // POST: Users/Create
+        // POST: AdmOrders/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("CustomerId,FullName,Email,Password,Phone,Address,Image,Details,Status")] Customer customer)
+        public async Task<IActionResult> Create([Bind("OrderId,CustomerFid,OrderDate,Time,TotalAmount,Details,Status")] Order order)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(customer);
+                _context.Add(order);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(customer);
+            ViewData["CustomerFid"] = new SelectList(_context.Customers, "CustomerId", "FullName", order.CustomerFid);
+            return View(order);
         }
 
-        // GET: Users/Edit/5
+        // GET: AdmOrders/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -72,22 +76,23 @@ namespace e_shop.Controllers
                 return NotFound();
             }
 
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null)
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
             {
                 return NotFound();
             }
-            return View(customer);
+            ViewData["CustomerFid"] = new SelectList(_context.Customers, "CustomerId", "FullName", order.CustomerFid);
+            return View(order);
         }
 
-        // POST: Users/Edit/5
+        // POST: AdmOrders/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("CustomerId,FullName,Email,Password,Phone,Address,Image,Details,Status")] Customer customer)
+        public async Task<IActionResult> Edit(int id, [Bind("OrderId,CustomerFid,OrderDate,Time,TotalAmount,Details,Status")] Order order)
         {
-            if (id != customer.CustomerId)
+            if (id != order.OrderId)
             {
                 return NotFound();
             }
@@ -96,12 +101,12 @@ namespace e_shop.Controllers
             {
                 try
                 {
-                    _context.Update(customer);
+                    _context.Update(order);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!CustomerExists(customer.CustomerId))
+                    if (!OrderExists(order.OrderId))
                     {
                         return NotFound();
                     }
@@ -112,10 +117,11 @@ namespace e_shop.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(customer);
+            ViewData["CustomerFid"] = new SelectList(_context.Customers, "CustomerId", "FullName", order.CustomerFid);
+            return View(order);
         }
 
-        // GET: Users/Delete/5
+        // GET: AdmOrders/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -123,58 +129,44 @@ namespace e_shop.Controllers
                 return NotFound();
             }
 
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.CustomerId == id);
-            if (customer == null)
+            var order = await _context.Orders
+                .Include(o => o.CustomerF)
+                .FirstOrDefaultAsync(m => m.OrderId == id);
+            if (order == null)
             {
                 return NotFound();
             }
 
-            return View(customer);
+            return View(order);
         }
 
-        // POST: Users/Delete/5
+        // POST: AdmOrders/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            // Load the order including its details
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .FirstOrDefaultAsync(o => o.OrderId == id);
 
-            if (customer == null)
+            if (order != null)
             {
-                TempData["ErrorMessage"] = "Customer not found.";
-                return RedirectToAction(nameof(Index));
+                // First delete related OrderDetails
+                _context.OrderDetails.RemoveRange(order.OrderDetails);
+
+                // Then delete the order
+                _context.Orders.Remove(order);
+
+                await _context.SaveChangesAsync();
             }
 
-            // Step 1: Get all orders of this customer
-            var orders = await _context.Orders
-                .Where(o => o.CustomerFid == id)
-                .ToListAsync();
-
-            // Step 2: Get all OrderDetails for those orders
-            var orderIds = orders.Select(o => o.OrderId).ToList();
-            var orderDetails = _context.OrderDetails
-         .Where(od => od.OrderFid.HasValue && orderIds.Contains(od.OrderFid.Value));
-
-            // Step 3: Delete OrderDetails
-            _context.OrderDetails.RemoveRange(orderDetails);
-
-            // Step 4: Delete Orders
-            _context.Orders.RemoveRange(orders);
-
-            // Step 5: Delete Customer
-            _context.Customers.Remove(customer);
-
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Customer and all related orders/details deleted.";
             return RedirectToAction(nameof(Index));
         }
 
-
-        private bool CustomerExists(int id)
+        private bool OrderExists(int id)
         {
-            return _context.Customers.Any(e => e.CustomerId == id);
+            return _context.Orders.Any(e => e.OrderId == id);
         }
     }
 }
