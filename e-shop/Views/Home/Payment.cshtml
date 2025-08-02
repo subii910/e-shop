@@ -1,12 +1,26 @@
 ﻿@model e_shop.Models.ViewModel.CheckoutViewModel
 @{
+    ViewData["Title"] = "Payment";
     Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
 }
 
 <h2>Payment Page</h2>
-<p>Total: @ViewBag.TotalAmount</p>
 
-<!-- Simulate success -->
+<p>Total: <strong>@ViewBag.TotalAmount</strong></p>
+
 <form asp-action="ConfirmOrder" method="post">
-    <button type="submit">Simulate Payment Success</button>
+    <div>
+        <label><strong>Select Payment Method:</strong></label><br />
+
+        <input type="radio" id="cod" name="PaymentMethod" value="CashOnDelivery" checked />
+        <label for="cod">Cash on Delivery</label><br />
+
+        <input type="radio" id="card" name="PaymentMethod" value="CardPayment" />
+        <label for="card">Card Payment</label><br />
+
+        <input type="radio" id="online" name="PaymentMethod" value="OnlineTransfer" />
+        <label for="online">Online Transfer</label>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Confirm Payment</button>
 </form>

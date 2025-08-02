@@ -1,14 +1,9 @@
 ﻿@model IEnumerable<e_shop.Models.CartItem>
 
-
 @{
     Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
-
-
     decimal? prtotal = 0;
 }
-
-
 
 <!-- Page Header Start -->
 <div class="container-fluid bg-secondary mb-5">
@@ -37,52 +32,29 @@
                     </tr>
                 </thead>
                 <tbody class="align-middle">
-
-                    @if (Model.Count() < 1)
+                    @if (!Model.Any())
                     {
-                        <h3>
-                            No item in your cart
-                        </h3>
-                        <a href="/Home/Products"><button class="btn btn-primary float-right">Add products</button> </a>
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <h3>No item in your cart</h3>
+                                <a href="/Home/Products">
+                                    <button class="btn btn-primary mt-2">Add Products</button>
+                                </a>
+                            </td>
+                        </tr>
                     }
                     else
                     {
-
-
-
-                        @foreach (var item in Model)
+                        foreach (var item in Model)
                         {
-                           
-                           
                             <tr>
-                                <td class="align-middle"><img src="/DataFiles/products/@item.product.Image" alt="" style="width: 50px;"> @item.product.ProductName</td>
-                                <td class="align-middle">$@item.product.Srice</td>
                                 <td class="align-middle">
-                                    <div class="input-group quantity mx-auto" style="width: 100px;">
-                                      @*  <div class="input-group-btn">
-                                            <button class="btn btn-sm btn-primary btn-minus">
-                                                <i class="fa fa-minus"></i>
-                                            </button>
-                                        </div>*@
-                                        <input type="number"
-                                               name="Quantities[@item.product.ProductId]"
-                                               class="quantity-input"
-                                               value="@item.quantity"
-                                               data-price="@item.product.Srice"
-                                               min="1"
-                                               style="width: 60px; text-align: center;" />
-
-                                        @* <div class="input-group-btn">
-                                            <button class="btn btn-sm btn-primary btn-plus">
-                                                <i class="fa fa-plus"></i>
-                                            </button>
-                                        </div> *@
-                                    </div>
-
+                                    <img src="/DataFiles/products/@item.product.Image" alt="" style="width: 50px;" />
+                                    @item.product.ProductName
                                 </td>
-                                <td class="item-total  align-middle">
-                                    $@((item.product.Srice * item.quantity))
-                                </td>
+                                <td class="align-middle">$@item.product.Srice</td>
+                                <td class="align-middle">@item.quantity</td>
+                                <td class="align-middle">$@(item.product.Srice* item.quantity)</td>
                                 <td class="align-middle">
                                     <a class="btn btn-sm btn-primary" href="/Home/Remove/@item.product.ProductId">
                                         <i class="fa fa-times"></i>
@@ -91,72 +63,27 @@
                             </tr>
                             prtotal += item.product.Srice * item.quantity;
                         }
-
                     }
-
                 </tbody>
             </table>
         </div>
+
         <div class="col-lg-4">
-         
             <div class="card border-secondary mb-5">
                 <div class="card-footer border-secondary bg-transparent">
                     <div class="d-flex justify-content-between mt-2">
                         <h5 class="font-weight-bold">Total</h5>
-                        <h5 class="font-weight-bold grand-total">@prtotal</h5>
+                        <h5 class="font-weight-bold grand-total">$@prtotal</h5>
                     </div>
-                    <a href="/Home/Products"> <button class="btn btn-block btn-primary my-3 py-3">Continue Shopping</button></a>
-                    <a href="/Home/Checkout"> <button class="btn btn-block btn-primary my-3 py-3">Proceed To Checkout</button></a>
+                    <a href="/Home/Products">
+                        <button class="btn btn-block btn-primary my-3 py-3">Continue Shopping</button>
+                    </a>
+                    <a href="/Home/Checkout">
+                        <button class="btn btn-block btn-primary my-3 py-3">Proceed To Checkout</button>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 <!-- Cart End -->
-
-
-<script>
-    document.querySelectorAll('.quantity-input').forEach(function(input) {
-        input.addEventListener('input', function () {
-            const quantity = parseInt(this.value) || 0;
-            const price = parseFloat(this.dataset.price);
-
-            // Get the nearest "Total" cell
-            const totalTd = this.closest('tr').querySelector('.item-total');
-
-            // Calculate total
-            const total = quantity * price;
-
-            // Update total cell text
-            totalTd.textContent = "$" + total.toFixed(2);
-        });
-    });
-</script>
-
-<script>
-    function updateGrandTotal() {
-        let grandTotal = 0;
-        document.querySelectorAll('.item-total').forEach(function (cell) {
-            const amount = parseFloat(cell.textContent.replace(/[^\d.]/g, '')) || 0;
-            grandTotal += amount;
-        });
-
-        // Update the grand total (Rs optional if you want to prepend it)
-        document.querySelector('.grand-total').textContent = grandTotal.toFixed(2);
-    }
-
-    document.querySelectorAll('.quantity-input').forEach(function(input) {
-        input.addEventListener('input', function () {
-            const quantity = parseInt(this.value) || 0;
-            const price = parseFloat(this.dataset.price);
-            const total = quantity * price;
-
-            // Update this row's total
-            const totalTd = this.closest('tr').querySelector('.item-total');
-            totalTd.textContent = "$" + total.toFixed(2);
-
-            // Update grand total
-            updateGrandTotal();
-        });
-    });
-</script>

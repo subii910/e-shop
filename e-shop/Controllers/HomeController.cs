@@ -198,9 +198,20 @@ namespace e_shop.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Checkout(CheckoutViewModel model)
         {
-            if (!ModelState.IsValid)
-                return View(model);
+            // Check if CartData has items
+            if (HomeController.CartData == null || !HomeController.CartData.Any())
+            {
+                ModelState.AddModelError("", "Your cart is empty. Please add items before proceeding to payment.");
+                return View(model); // Return the same checkout view with error
+            }
 
+            // Validate form
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            // Store checkout details temporarily for Payment view
             TempData["FullName"] = model.FullName;
             TempData["Email"] = model.Email;
             TempData["Phone"] = model.Phone;
@@ -208,6 +219,7 @@ namespace e_shop.Controllers
 
             return RedirectToAction("Payment");
         }
+
 
         public IActionResult Payment()
         {
@@ -379,8 +391,32 @@ namespace e_shop.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult ConfirmOrder()
+        public IActionResult ConfirmOrder(string PaymentMethod)
         {
+
+            // Handle payment logic
+            if (PaymentMethod == "CashOnDelivery")
+            {
+                // Handle COD
+            }
+            else if (PaymentMethod == "CardPayment")
+            {
+                // Redirect to card payment gateway or simulate
+            }
+            else if (PaymentMethod == "OnlineTransfer")
+            {
+                // Handle online transfer details (e.g., show account info)
+            }
+
+
+
+
+
+
+
+
+
+
             if (CartData == null || !CartData.Any())
             {
                 TempData["Message"] = "Cart is empty.";
