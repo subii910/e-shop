@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -142,10 +143,42 @@
                                 </div>
                             </div>
                             <a href="/Home/Contact" class="nav-item nav-link">Contact</a>
+                            <a href="/Home/MyOrders" class="nav-item nav-link">MyOrders</a>
                         </div>
                         <div class="navbar-nav ml-auto py-0">
-                            <a href="/Home/Login" class="nav-item nav-link">Login/Register</a>
+                            @if (User.Identity.IsAuthenticated && User.IsInRole("User"))
+                            {
+                                var imagePath = User.FindFirst("ProfileImage")?.Value;
+                                <div class="dropdown">
+                                    <a class="nav-link dropdown-toggle text-dark d-flex align-items-center" href="#" id="userDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="cursor: pointer;">
+
+                                        @if (!string.IsNullOrEmpty(imagePath))
+                                        {
+                                            <img src="@imagePath" alt="Profile" class="rounded-circle mr-2" width="32" height="32" style="object-fit: cover;" />
+                                        }
+                                        Welcome, @User.Identity.Name!
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+                                        <span class="dropdown-item-text small text-muted">
+                                            Email: @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                                        </span>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="/Home/UserProfile">My Profile</a>
+                                        <a class="dropdown-item" href="/Home/Logout">Logout</a>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <a class="nav-item nav-link" href="/Home/Login">Login</a>
+                                <a class="nav-item nav-link" href="/Home/Register">Register</a>
+                            }
                         </div>
+
+
+
+
+
                     </div>
                 </nav>
 
@@ -252,6 +285,7 @@
                             <a class="text-dark mb-2" href="/Home/Products"><i class="fa fa-angle-right mr-2"></i>Products</a>
                             <a class="text-dark mb-2" href="/Home/Cart"><i class="fa fa-angle-right mr-2"></i>Shopping Cart</a>
                             <a class="text-dark mb-2" href="/Home/Checkout"><i class="fa fa-angle-right mr-2"></i>Checkout</a>
+                            <a class="text-dark mb-2" href="/Home/MyOrders"><i class="fa fa-angle-right mr-2"></i>MyOrders</a>
                             <a class="text-dark mb-2" href="/Home/Contact"><i class="fa fa-angle-right mr-2"></i>Contact</a>
                             @* <a class="text-dark mb-2" href="/Home/Login"><i class="fa fa-angle-right mr-2"></i>Login/Register</a> *@
                         </div>
@@ -280,6 +314,9 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
     <script src="/Users/assets/lib/easing/easing.min.js"></script>
     <script src="/Users/assets/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <!-- Contact Javascript File -->
     <script src="/Users/assets/mail/jqBootstrapValidation.min.js"></script>

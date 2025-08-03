@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -191,7 +192,27 @@
                                 </ul>
                             </div>
                         </li>
+                        <li class="nav-item">
+                            <a href="/Home/ContactMessages">
+                                <i class="fas fa-th-list"></i>
+                                <p>ContactMessages</p>
 
+                            </a>
+                            <div class="collapse" id="sidebarLayouts">
+                                <ul class="nav nav-collapse">
+                                    <li>
+                                        <a href="sidebar-style-2.html">
+                                            <span class="sub-item">Sidebar Style 2</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="icon-menu.html">
+                                            <span class="sub-item">Icon Menu</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
                       @* <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#tables">
                                 <i class="fas fa-table"></i>
@@ -247,61 +268,28 @@
                 </div>
                 <!-- Navbar Header -->
                 <nav class="navbar navbar-header navbar-header-transparent navbar-expand-lg border-bottom">
-                    <div class="container-fluid">
-                       
-
-                        <ul class="navbar-nav topbar-nav ms-md-auto align-items-center">
-                            
-                            
-
-                            <li class="nav-item topbar-user dropdown hidden-caret">
-                                <a class="dropdown-toggle profile-pic"
-                                   data-bs-toggle="dropdown"
-                                   href="#"
-                                   aria-expanded="false">
-                                    <div class="avatar-sm">
-                                        <img src="/Admin/assets/img/passport size.jpg"
-                                             alt="..."
-                                             class="avatar-img rounded-circle" />
-                                    </div>
-                                    <span class="profile-username">
-                                        <span class="op-7">Hi,</span>
-                                        <span class="fw-bold">Subhan</span>
-                                    </span>
+                    <div class="ml-auto d-flex align-items-center">
+                        @if (User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                        {
+                            <div class="dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" id="adminDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="cursor:pointer;">
+                                    Welcome, @User.Identity.Name!
                                 </a>
-                                <ul class="dropdown-menu dropdown-user animated fadeIn">
-                                    <div class="dropdown-user-scroll scrollbar-outer">
-                                    <li>
-                                        <div class="user-box">
-                                            <div class="avatar-lg">
-                                                <img src="/Admin/assets/img/passport size.jpg"
-                                                     alt="image profile"
-                                                     class="avatar-img rounded" />
-                                            </div>
-                                            <div class="u-text">
-                                                <h4>Subhan</h4>
-                                                <p class="text-muted">Subhanbutt910@gmail.com</p>
-                                                <a href="/Profile"
-                                                   class="btn btn-xs btn-secondary btn-sm">View Profile</a>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="/Profile">My Profile</a>
-                                        <a class="dropdown-item" href="#">My Balance</a>
-                                        <a class="dropdown-item" href="#">Inbox</a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="#">Account Setting</a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="/Home/Login/">Logout</a>
-                                    </li>
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="adminDropdown">
+                                    <span class="dropdown-item-text small text-muted">
+                                        Email: @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                                    </span>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="/Home/Profile">Admin Profile</a>
+
+                                    <a class="dropdown-item" href="/Home/Logout">Logout</a>
+                                </div>
+                            </div>
+                        }
                     </div>
-                    </ul>
-                    </li>
-                    </ul>
-            </div>
-            </nav>
+                </nav>
+
+
             <!-- End Navbar -->
         </div>
 
@@ -352,6 +340,9 @@
     <script src="/Admin/assets/js/core/jquery-3.7.1.min.js"></script>
     <script src="/Admin/assets/js/core/popper.min.js"></script>
     <script src="/Admin/assets/js/core/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <!-- jQuery Scrollbar -->
     <script src="/Admin/assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js"></script>

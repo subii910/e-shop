@@ -1,10 +1,16 @@
-using e_shop.Models;
+﻿using e_shop.Models;
 using e_shop.Models.ViewModel;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Reflection;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+
 
 namespace e_shop.Controllers
 {
@@ -43,53 +49,223 @@ namespace e_shop.Controllers
             return View(viewModel);
         }
 
-        //for admin page
-        public IActionResult Admin()
+       
+        //logout
+        public async Task<IActionResult> Logout()
         {
-            return View();
+            await HttpContext.SignOutAsync("MyCookieAuth");
+            return RedirectToAction("Login", "Home");
         }
 
         //for login page
+        [Authorize]
+        [AllowAnonymous]
         public IActionResult Login()
         {
             return View();
         }
 
-        public IActionResult LoginCheck(string txtEmail, string txtPass)
+        //userProfile
+        [HttpGet]
+        [Authorize(Roles = "User")]
+        public IActionResult UserProfile()
         {
-            // Try to find the user in Admins table
-            var admin = db.Admins.FirstOrDefault(x => x.Email == txtEmail && x.Passwor == txtPass);
-            if (admin != null)
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            var user = db.Customers.FirstOrDefault(x => x.Email == email);
+            if (user == null)
+                return NotFound();
+
+            var model = new UserProfileViewModel
             {
-                TempData["Title"] = "Login";
-                TempData["Message"] = "Admin login successful";
-                TempData["Icon"] = "success";
-                return Redirect("/Home/Admin");
+                FullName = user.FullName,
+                Email = user.Email,
+                Phone = user.Phone,
+                Address = user.Address,
+                ImagePath = user.Image
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> UserProfile(UserProfileViewModel model)
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized();
+
+            Customer? user = db.Customers.FirstOrDefault(x => x.Email == email);
+            if (user == null)
+                return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                // Update user fields
+                user.FullName = model.FullName;
+                user.Phone = model.Phone;
+                user.Address = model.Address;
+
+                // Image upload (optional)
+                if (model.ImageFile != null && model.ImageFile.Length > 0)
+                {
+                    try
+                    {
+                        var fileName = Guid.NewGuid() + Path.GetExtension(model.ImageFile.FileName);
+                        var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/Images/Users");
+                        Directory.CreateDirectory(uploadPath);
+
+                        var fullPath = Path.Combine(uploadPath, fileName);
+                        using (var stream = new FileStream(fullPath, FileMode.Create))
+                        {
+                            model.ImageFile.CopyTo(stream);
+                        }
+
+                        user.Image = "/Images/Users/" + fileName;
+                    }
+                    catch
+                    {
+                        ModelState.AddModelError("ImageFile", "Image upload failed.");
+                        model.ImagePath = user.Image;
+                        return View(model);
+                    }
+                }
+
+                // Password update (optional)
+                if (!string.IsNullOrWhiteSpace(model.CurrentPassword) && !string.IsNullOrWhiteSpace(model.NewPassword))
+                {
+                    if (!BCrypt.Net.BCrypt.Verify(model.CurrentPassword, user.Password))
+                    {
+                        ModelState.AddModelError("CurrentPassword", "Current password is incorrect.");
+                        model.ImagePath = user.Image;
+                        return View(model);
+                    }
+
+                    if (model.NewPassword != model.ConfirmPassword)
+                    {
+                        ModelState.AddModelError("ConfirmPassword", "Passwords do not match.");
+                        model.ImagePath = user.Image;
+                        return View(model);
+                    }
+
+                    user.Password = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+                }
+
+                // Save changes
+                db.Entry(user).State = EntityState.Modified;
+                var affected = db.SaveChanges();
+
+                // ✅ Update authentication claims so nav info reflects new data
+                var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.CustomerId.ToString()),
+            new(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.FullName),
+            new Claim("ProfileImage", user.Image ?? "/Images/default.png"),
+            new Claim(ClaimTypes.Role, "User")
+        };
+
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var principal = new ClaimsPrincipal(identity);
+                await HttpContext.SignInAsync("MyCookieAuth", principal);
+
+
+                TempData["Message"] = affected > 0 ? "Profile updated successfully." : "No changes detected.";
+                return RedirectToAction("UserProfile");
             }
 
-            // Try to find the user in Customers table
-            var user = db.Customers.FirstOrDefault(x => x.Email == txtEmail && x.Password == txtPass);
-            if (user != null)
+            model.ImagePath = user.Image;
+            return View(model);
+        }
+
+
+
+
+
+
+        //userpasswordhashing
+        //public IActionResult HashUserPasswords()
+        //{
+        //    var users = db.Customers.ToList();
+        //    foreach (var user in users)
+        //    {
+        //        if (!user.Password.StartsWith("$2"))
+        //        {
+        //            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+        //        }
+        //    }
+
+        //    db.SaveChanges();
+        //    return Content("User passwords hashed successfully.");
+        //}
+
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> LoginCheck(string txtEmail, string txtPass)
+        {
+            txtEmail = txtEmail?.Trim();
+
+            // Try Admin Login
+            var admin = db.Admins.FirstOrDefault(x => x.Email == txtEmail);
+            if (admin != null && BCrypt.Net.BCrypt.Verify(txtPass, admin.Passwor)) // Typo fixed: Passwor -> Password
             {
-                //AppState.LoggedInCustomer = user;
+                var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, admin.Username ?? ""),
+            new Claim(ClaimTypes.Email, admin.Email ?? ""),
+            new Claim(ClaimTypes.Role, "Admin")
+        };
+
+                var identity = new ClaimsIdentity(claims, "MyCookieAuth");
+                var principal = new ClaimsPrincipal(identity);
+
+                await HttpContext.SignInAsync("MyCookieAuth", principal);
+
+                TempData["Message"] = "Admin login successful";
+                return RedirectToAction("Admin", "Home");
+            }
+
+            // Try Customer Login
+            var user = db.Customers.FirstOrDefault(x => x.Email == txtEmail);
+            if (user != null && BCrypt.Net.BCrypt.Verify(txtPass, user.Password))
+            {
+                var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.FullName ?? ""),
+            new Claim(ClaimTypes.Email, user.Email ?? ""),
+            new Claim(ClaimTypes.Role, user.Role ?? "User"),
+            new Claim("ProfileImage", user.Image ?? "") // ✅ Profile image for navbar
+        };
+
+                var identity = new ClaimsIdentity(claims, "MyCookieAuth");
+                var principal = new ClaimsPrincipal(identity);
+
+                await HttpContext.SignInAsync("MyCookieAuth", principal);
+
+                TempData["Message"] = "User login successful";
                 return RedirectToAction("Index", "Home");
             }
-           
-            // If neither found
+
+            // Login Failed
             TempData["Title"] = "Error";
             TempData["Message"] = "Email or Password is incorrect";
             TempData["Icon"] = "error";
-            return Redirect("/Home/Login");
+            return RedirectToAction("Login");
         }
 
 
 
 
         //for register
- 
+        [AllowAnonymous]
         public IActionResult Register(string txtName, string txtEmail, string txtPass, string txtCPass, bool acceptTerms)
         {
-            if (acceptTerms==true)
+            if (acceptTerms == true)
             {
                 TempData["Title"] = "Error";
                 TempData["Message"] = "You must accept the terms and conditions to register.";
@@ -97,6 +273,13 @@ namespace e_shop.Controllers
                 return Redirect("/Home/Login");
             }
 
+            if (string.IsNullOrWhiteSpace(txtPass))
+            {
+                TempData["Title"] = "Error";
+                TempData["Message"] = "Password cannot be empty.";
+                TempData["Icon"] = "warning";
+                return Redirect("/Home/Login");
+            }
 
             if (txtPass != txtCPass)
             {
@@ -119,7 +302,7 @@ namespace e_shop.Controllers
             {
                 FullName = txtName,
                 Email = txtEmail,
-                Password = txtPass,
+                Password = BCrypt.Net.BCrypt.HashPassword(txtPass),
                 Role = "User"
             };
 
@@ -132,44 +315,112 @@ namespace e_shop.Controllers
 
             return Redirect("/Home/Login");
         }
-    
-        
-        [HttpPost]
-        [Authorize(Roles = "Admin")] // only if using ASP.NET Identity
-        public IActionResult AddAdmin(string email, string password)
-        {
-            var existingAdmin = db.Admins.FirstOrDefault(x => x.Email == email);
-            if (existingAdmin != null)
-            {
-                TempData["Message"] = "Admin with this email already exists.";
-                return RedirectToAction("Dashboard");
-            }
-
-            var newAdmin = new Admin
-            {
-                Email = email,
-                Passwor = password // hash this!
-            };
-
-            db.Admins.Add(newAdmin);
-            db.SaveChanges();
-
-            TempData["Message"] = "New Admin added successfully.";
-            return RedirectToAction("Dashboard");
-        }
 
 
-        //for contact
-        public IActionResult Contact()
+
+
+        //Admin
+
+        public IActionResult Admin()
         {
             return View();
         }
 
+
+//hashing admin pass
+
+        //public IActionResult HashAdminPasswords()
+        //{
+        //    var admins = db.Admins.ToList();
+
+        //    foreach (var admin in admins)
+        //    {
+        //        if (!admin.Passwor.StartsWith("$2")) // not already hashed
+        //        {
+        //            admin.Passwor = BCrypt.Net.BCrypt.HashPassword(admin.Passwor);
+        //        }
+        //    }
+
+        //    db.SaveChanges();
+        //    return Content("Hashed all plain-text admin passwords.");
+        //}
+
+        //AdminProfile
+
+        [Authorize(Roles = "Admin")]
+        public IActionResult Profile()
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var admin = db.Admins.FirstOrDefault(a => a.Email == email);
+            if (admin == null)
+                return RedirectToAction("Login");
+
+            var model = new AdminProfileViewModel
+            {
+                Username = admin.Username,
+                Email = admin.Email
+            };
+
+            return View(model);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Profile(AdminProfileViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var admin = db.Admins.FirstOrDefault(a => a.Email == email);
+            if (admin == null)
+                return RedirectToAction("Login");
+
+            // Verify current password
+            if (!BCrypt.Net.BCrypt.Verify(model.CurrentPassword, admin.Passwor))
+            {
+                ModelState.AddModelError("CurrentPassword", "Incorrect current password.");
+                return View(model);
+            }
+
+            // Update fields
+            admin.Username = model.Username;
+            admin.Email = model.Email;
+
+            if (!string.IsNullOrWhiteSpace(model.NewPassword))
+            {
+                admin.Passwor = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+            }
+
+            db.SaveChanges();
+
+            // 🔁 Update claims and re-sign in
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, admin.Username),
+        new Claim(ClaimTypes.Email, admin.Email),
+        new Claim(ClaimTypes.Role, "Admin")
+    };
+
+            var identity = new ClaimsIdentity(claims, "MyCookieAuth");
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync("MyCookieAuth", principal);
+
+            TempData["Message"] = "Profile updated successfully.";
+            return RedirectToAction("Profile");
+        }
+
+
+
+
+  
+
         //for checkout
+        [Authorize(AuthenticationSchemes = "MyCookieAuth", Roles = "User")]
         public IActionResult Checkout()
         {
-            // Check if user is logged in
-            var userEmail = User.Identity?.Name;
+            var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
 
             CheckoutViewModel model = new CheckoutViewModel
             {
@@ -178,7 +429,6 @@ namespace e_shop.Controllers
 
             if (!string.IsNullOrEmpty(userEmail))
             {
-                // Fetch user info from DB using email
                 var user = db.Customers.FirstOrDefault(u => u.Email == userEmail);
                 if (user != null)
                 {
@@ -194,24 +444,26 @@ namespace e_shop.Controllers
 
 
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(AuthenticationSchemes = "MyCookieAuth", Roles = "User")]
         public IActionResult Checkout(CheckoutViewModel model)
         {
-            // Check if CartData has items
             if (HomeController.CartData == null || !HomeController.CartData.Any())
             {
                 ModelState.AddModelError("", "Your cart is empty. Please add items before proceeding to payment.");
-                return View(model); // Return the same checkout view with error
-            }
-
-            // Validate form
-            if (!ModelState.IsValid)
-            {
+                model.CartItems = new List<CartItem>(); // Ensure CartItems isn't null
                 return View(model);
             }
 
-            // Store checkout details temporarily for Payment view
+            if (!ModelState.IsValid)
+            {
+                model.CartItems = HomeController.CartData; // Reassign items
+                return View(model);
+            }
+
+            // Store values temporarily for use in the Payment step
             TempData["FullName"] = model.FullName;
             TempData["Email"] = model.Email;
             TempData["Phone"] = model.Phone;
@@ -219,6 +471,8 @@ namespace e_shop.Controllers
 
             return RedirectToAction("Payment");
         }
+
+
 
 
         public IActionResult Payment()
@@ -409,14 +663,6 @@ namespace e_shop.Controllers
             }
 
 
-
-
-
-
-
-
-
-
             if (CartData == null || !CartData.Any())
             {
                 TempData["Message"] = "Cart is empty.";
@@ -475,6 +721,79 @@ namespace e_shop.Controllers
         {
             return View();
         }
+
+        [Authorize(Roles = "User")]
+        public IActionResult MyOrders()
+        {
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var customer = db.Customers.FirstOrDefault(c => c.Email == email);
+
+            if (customer == null)
+            {
+                TempData["Message"] = "Customer not found.";
+                return RedirectToAction("Login");
+            }
+
+            var orders = db.Orders
+                .Where(o => o.CustomerFid == customer.CustomerId)
+                .OrderByDescending(o => o.OrderDate)
+                .Select(o => new
+                {
+                    o.OrderId,
+                    o.OrderDate,
+                    o.Time,
+                    o.TotalAmount,
+                    o.Status,
+                    Items = o.OrderDetails.Select(od => new
+                    {
+                        od.ProductF.ProductName,
+                        od.Quantity,
+                        od.UnitPrice
+                    }).ToList()
+                }).ToList();
+
+            return View(orders);
+        }
+
+
+
+        //for contact
+        [HttpGet]
+        public IActionResult Contact()
+        {
+            return View();
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Contact(ContactViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var message = new ContactMessage
+            {
+                Name = model.Name,
+                Email = model.Email,
+                Subject = model.Subject,
+                Message = model.Message
+            };
+
+            _context.ContactMessages.Add(message);
+            await _context.SaveChangesAsync();
+
+            TempData["Message"] = "Your message has been submitted!";
+            return RedirectToAction("Contact");
+        }
+
+        [Authorize(Roles = "Admin")]
+        public IActionResult ContactMessages()
+        {
+            var messages = _context.ContactMessages.OrderByDescending(m => m.SentAt).ToList();
+            return View(messages);
+        }
+
+
+
 
         public IActionResult Privacy()
         {

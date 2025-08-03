@@ -25,51 +25,58 @@
             <div class="mb-4">
                 <h4 class="font-weight-semi-bold mb-4">Billing Address</h4>
                 <div class="row">
-                    <form asp-action="Checkout" method="post">
-                        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+                   
 
-                        <div>
-                            <label>Full Name</label>
-                            <input asp-for="FullName" required class="form-control" />
-                        </div>
-                        <div>
-                            <label>Email</label>
-                            <input asp-for="Email" type="email" required class="form-control" />
-                        </div>
-                        <div>
-                            <label>Address</label>
-                            <input asp-for="Address" required class="form-control" />
-                        </div>
-                        <div>
-                            <label>Phone</label>
-                            <input asp-for="Phone" required class="form-control" />
-                        </div>
+<form asp-action="Checkout" method="post">
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
-                        <h4>Cart Summary</h4>
-                        <table class=" table-responsive table-bordered " > 
-                            <thead>
-                                <tr>
-                                    <th>Product </th>
-                                    <th>Quantity</th>
-                                    <th>Price </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in Model.CartItems)
-                                {
-                                    <tr class="table-bordered">
-                                        <td>@item.product.ProductName</td>
-                                        <td class="text-center">@item.quantity</td>
-                                        <td>@(item.product.Srice* item.quantity)</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+    <div class="mb-3">
+        <label class="form-label">Full Name</label>
+        <input asp-for="FullName" required class="form-control" />
+    </div>
 
-                        <p><strong>Total:</strong> @Model.TotalAmount</p>
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input asp-for="Email" type="email" required class="form-control" />
+    </div>
 
-                        <button type="submit">Proceed</button>
-                    </form>
+    <div class="mb-3">
+        <label class="form-label">Address</label>
+        <input asp-for="Address" required class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Phone</label>
+        <input asp-for="Phone" required class="form-control" />
+    </div>
+
+    <h4>Cart Summary</h4>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th class="text-center">Quantity</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.CartItems)
+            {
+                <tr>
+                    <td>@item.product.ProductName</td>
+                    <td class="text-center">@item.quantity</td>
+                    <td>@(item.product.Srice * item.quantity)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <p><strong>Total:</strong> @Model.TotalAmount</p>
+
+    <button type="submit" class="btn btn-primary">Proceed</button>
+</form>
+
 
 </div>
          </div>

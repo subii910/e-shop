@@ -1,0 +1,67 @@
+﻿@using e_shop.Models.ViewModel
+@model AdminProfileViewModel
+
+@{
+    ViewData["Title"] = "Admin Profile";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h4 class="mb-0">Admin Profile</h4>
+                </div>
+                <div class="card-body p-4">
+
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert alert-success">@TempData["Message"]</div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger">@TempData["Error"]</div>
+                    }
+
+                    <form asp-action="Profile" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Username" class="form-label">Username</label>
+                            <input asp-for="Username" class="form-control" />
+                            <span class="text-danger">@Html.ValidationMessageFor(m => m.Username)</span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Email" class="form-label">Email</label>
+                            <input asp-for="Email" class="form-control" />
+                            <span class="text-danger">@Html.ValidationMessageFor(m => m.Email)</span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="CurrentPassword" class="form-label">Current Password</label>
+                            <input asp-for="CurrentPassword" class="form-control" type="password" />
+                            <span class="text-danger">@Html.ValidationMessageFor(m => m.CurrentPassword)</span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="NewPassword" class="form-label">New Password</label>
+                            <input asp-for="NewPassword" class="form-control" type="password" />
+                            <span class="text-danger">@Html.ValidationMessageFor(m => m.NewPassword)</span>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                            <input asp-for="ConfirmPassword" class="form-control" type="password" />
+                            <span class="text-danger">@Html.ValidationMessageFor(m => m.ConfirmPassword)</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Update Profile</button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

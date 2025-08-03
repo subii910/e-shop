@@ -1,0 +1,29 @@
+﻿@model List<e_shop.Models.ContactMessage>
+@{
+    
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+<h2>Messages</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Subject</th>
+            <th>Message</th>
+            <th>Sent At</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var m in Model)
+        {
+            <tr>
+                <td>@m.Name</td>
+                <td>@m.Email</td>
+                <td>@m.Subject</td>
+                <td>@m.Message</td>
+                <td>@m.SentAt.ToString("g")</td>
+            </tr>
+        }
+    </tbody>
+</table>
