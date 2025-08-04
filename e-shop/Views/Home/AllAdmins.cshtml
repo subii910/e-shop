@@ -1,0 +1,35 @@
+﻿@model IEnumerable<Admin>
+@{
+    ViewData["Title"] = "All Admins";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+}
+
+<h2>All Admins</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Role</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var admin in Model)
+        {
+            <tr>
+                <td>@admin.Username</td>
+                <td>@admin.Email</td>
+                <td>@admin.Status</td>
+                <td>@admin.Role</td>
+            </tr>
+        }
+    </tbody>
+</table>

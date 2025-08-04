@@ -1,24 +1,40 @@
-﻿
-@{
-	Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
-
-
+﻿@{
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
-<h1>Welcome to the Admin Panel</h1>
-<h2>Hi Admin!</h2>
-<p>
-	You can manage your shopping Categories,Products & can see Users from the side-bar
-	<i class="fa-solid fa-face-smile"></i>
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4 text-primary">Welcome to the Admin Panel</h1>
+        <h4 class="text-muted">Hi Admin 👋</h4>
+    </div>
 
-</p>
-<br />
-<br />
-<br />
-<br />
-<br />
-<br />
-<br />
-<h1>Thank you!</h1>
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-lg border-0 rounded-3">
+                <div class="card-body">
+                    <p class="lead">
+                        From here, you can manage the following features of your store:
+                    </p>
+                    <ul class="list-group list-group-flush mb-3">
+                        <li class="list-group-item">🗂 Manage <strong>Categories</strong></li>
+                        <li class="list-group-item">📦 Manage <strong>Products</strong></li>
+                        <li class="list-group-item">📋 View & Process <strong>Orders</strong></li>
+                        <li class="list-group-item">➕ Add a <strong>New Admin</strong></li>
+                        <li class="list-group-item">👥 View <strong>All Admins</strong> & <strong>Users</strong></li>
+                        <li class="list-group-item">✉️ View <strong>Contact Messages</strong></li>
+                    </ul>
 
+                    <div class="alert alert-info text-center">
+                        <i class="fa-solid fa-face-smile fa-2x me-2"></i>
+                        Everything you need is in the side navigation bar.
+                    </div>
+                </div>
+            </div>
 
+            <div class="text-center mt-5">
+                <h2 class="text-success">Thank You!</h2>
+                <p>Keep things secure and organized. 👨‍💻</p>
+            </div>
+        </div>
+    </div>
+</div>
