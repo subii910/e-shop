@@ -5,14 +5,16 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Stripe;
-using StripeCustomer = Stripe.Customer;
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using StripeCustomer = Stripe.Customer;
 
 
 namespace e_shop.Controllers
@@ -25,14 +27,16 @@ namespace e_shop.Controllers
         private Customerwebsite1Context db;
         private Customerwebsite1Context _context;
         private readonly IConfiguration _configuration;
-      
-        public HomeController(ILogger<HomeController> logger, Customerwebsite1Context context, IConfiguration configuration)
+        private readonly StripeSettings _stripeSettings;
+
+        public HomeController(ILogger<HomeController> logger, Customerwebsite1Context context,  IOptions<StripeSettings> stripeOptions)
         {
             _logger = logger;
             db = new Customerwebsite1Context();
             _context = context;
-            _configuration = configuration;
-
+       
+            _stripeSettings = stripeOptions.Value;
+            StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
         }
         //for userpage
 
@@ -674,7 +678,6 @@ namespace e_shop.Controllers
 
             return RedirectToAction("Cart");
         }
-
         // PLACE ORDER - COD
         public IActionResult PlaceOrderCOD()
         {
@@ -683,6 +686,8 @@ namespace e_shop.Controllers
                 TempData["Message"] = "Cart is empty.";
                 return RedirectToAction("Cart");
             }
+
+            TempData.Keep();
 
             string? email = TempData.Peek("Email")?.ToString();
             if (string.IsNullOrEmpty(email))
@@ -744,16 +749,33 @@ namespace e_shop.Controllers
             return RedirectToAction("OrderConfirmation");
         }
 
+
         // STRIPE PAYMENT GET
+
         public IActionResult StripePayment()
         {
-            decimal total = (decimal)CartData.Sum(i => i.product.Srice * i.quantity);
-            long amountInPaise = (long)(total * 100); // Stripe uses smallest currency unit
+            TempData.Keep();
+
+            if (!CartData.Any())
+            {
+                TempData["Message"] = "Cart is empty.";
+                return RedirectToAction("Cart");
+            }
+
+            decimal total = (decimal)CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity);
+            long amountInSmallestUnit = (long)(total * 100); // AED/INR: 100 fils/paise = 1 unit
+
+            // Optional: Validate amount against Stripe minimums
+            if (amountInSmallestUnit < 100)
+            {
+                TempData["Message"] = "Total must be at least AED/INR 1.00 for Stripe payment.";
+                return RedirectToAction("Cart");
+            }
 
             var options = new PaymentIntentCreateOptions
             {
-                Amount = amountInPaise,
-                Currency = "inr",
+                Amount = amountInSmallestUnit,
+                Currency = "aed", // or "inr" depending on your business
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
                 {
                     Enabled = true,
@@ -765,17 +787,22 @@ namespace e_shop.Controllers
 
             ViewBag.ClientSecret = paymentIntent.ClientSecret;
             ViewBag.Amount = total;
-            return View();
+            ViewBag.PublishableKey = "pk_test_51RsOPRBRjkkGDzT6vEPYBXPvMcrW7yiRCtWZ8zGVSlY0de8IiYzTy1ALnsP5nbxO3AwvAJDIkMtnNSMPY2kH3TSP008vc2frIn";
+            return View(); // Ensure you have a matching StripePayment.cshtml view
         }
 
 
-
-
         // CONFIRM STRIPE PAYMENT
-        public IActionResult ConfirmStripePayment(string paymentIntentId)
+        public IActionResult ConfirmStripePayment([FromQuery(Name = "payment_intent")] string paymentIntentId)
+
         {
+            System.Diagnostics.Debug.WriteLine("✅ ConfirmStripePayment HIT");
+
+            TempData.Keep();
+
             var service = new PaymentIntentService();
             var intent = service.Get(paymentIntentId);
+            System.Diagnostics.Debug.WriteLine("💳 Payment status: " + intent.Status);
 
             if (intent.Status != "succeeded")
             {
@@ -783,8 +810,7 @@ namespace e_shop.Controllers
                 return RedirectToAction("Cart");
             }
 
-            // Get customer data
-            string email = TempData["Email"]?.ToString();
+            string? email = TempData.Peek("Email")?.ToString();
             if (string.IsNullOrEmpty(email))
             {
                 TempData["Message"] = "Customer email not found.";
@@ -792,12 +818,11 @@ namespace e_shop.Controllers
             }
 
             var customer = db.Customers.FirstOrDefault(c => c.Email == email);
-
             if (customer == null)
             {
                 customer = new e_shop.Models.Customer
                 {
-                    FullName = TempData["FullName"]?.ToString(),
+                    FullName = TempData.Peek("FullName")?.ToString(),
                     Email = email,
                     Role = "User"
                 };
@@ -805,14 +830,22 @@ namespace e_shop.Controllers
                 db.Customers.Add(customer);
                 db.SaveChanges();
             }
+            else
+            {
+                string? fullName = TempData.Peek("FullName")?.ToString();
+                if (!string.IsNullOrWhiteSpace(fullName) && fullName != customer.FullName)
+                {
+                    customer.FullName = fullName;
+                    db.SaveChanges();
+                }
+            }
 
-            // Create order
-            var order = new Order
+            var order = new e_shop.Models.Order
             {
                 CustomerFid = customer.CustomerId,
-                OrderDate = DateTime.Now,
+                OrderDate = DateTime.Now.Date,
                 Time = TimeOnly.FromDateTime(DateTime.Now),
-                TotalAmount = CartData.Sum(i => i.product.Srice * i.quantity),
+                TotalAmount = CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity),
                 Status = "Paid",
                 PaymentMethod = "Stripe"
             };
@@ -831,10 +864,10 @@ namespace e_shop.Controllers
             db.SaveChanges();
             CartData.Clear();
 
-            TempData["Message"] = "Your order has been placed via Stripe!";
+            TempData["Message"] = "Payment successful. Order placed!";
             return RedirectToAction("OrderConfirmation");
-        }
 
+        }
 
 
         // ORDER CONFIRMATION

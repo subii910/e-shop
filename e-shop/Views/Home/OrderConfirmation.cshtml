@@ -1,9 +1,17 @@
 ﻿@{
+    ViewData["Title"] = "Order Confirmation";
     Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
 }
-<h2>Order Confirmed</h2>
-<p>Your order has been successfully placed!</p>
-@if (TempData["Message"] != null)
-{
-    <div class="alert alert-success">@TempData["Message"]</div>
-}
+
+<div class="container mt-5">
+    <h2 class="text-success">Order Placed Successfully</h2>
+
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success mt-3">
+            @TempData["Message"]
+        </div>
+    }
+
+    <a class="btn btn-primary mt-4" href="@Url.Action("MyOrders", "Home")">View My Orders</a>
+</div>

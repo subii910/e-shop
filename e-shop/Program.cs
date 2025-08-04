@@ -16,7 +16,10 @@ builder.Services.AddAuthentication("MyCookieAuth")
 
 builder.Services.AddAuthorization();
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-StripeConfiguration.ApiKey = "your_stripe_secret_key";
+builder.Services.Configure<StripeSettings>(
+    builder.Configuration.GetSection("Stripe"));
+
+StripeConfiguration.ApiKey = "sk_test_51RsOPRBRjkkGDzT6l9Xq9tVUghcKuGRhd4MER5UPR4L92sGutKbe2Oo3igteVF4HbtvvCYVRqRN56dhx0Cwqi35G001vRMS4xj";
 
 
 var app = builder.Build();
