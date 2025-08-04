@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using e_shop.Models;
 
@@ -11,9 +12,11 @@ using e_shop.Models;
 namespace e_shop.Migrations
 {
     [DbContext(typeof(Customerwebsite1Context))]
-    partial class Customerwebsite1ContextModelSnapshot : ModelSnapshot
+    [Migration("20250804114631_AddPaymentMethodToOrder")]
+    partial class AddPaymentMethodToOrder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

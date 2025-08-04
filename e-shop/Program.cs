@@ -14,6 +14,7 @@ builder.Services.AddAuthentication("MyCookieAuth")
     });
 
 builder.Services.AddAuthorization();
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
 
 var app = builder.Build();

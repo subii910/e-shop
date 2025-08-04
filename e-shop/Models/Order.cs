@@ -18,7 +18,7 @@ public partial class Order
     public string? Details { get; set; }
 
     public string? Status { get; set; }
-
+    public string PaymentMethod { get; set; }
     public virtual Customer? CustomerF { get; set; }
 
     public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();

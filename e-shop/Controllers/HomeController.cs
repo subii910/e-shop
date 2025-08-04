@@ -1,15 +1,18 @@
 ﻿using e_shop.Models;
 using e_shop.Models.ViewModel;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Razorpay.Api;
+using Razorpay.Api;
 using System.Diagnostics;
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 
 
 namespace e_shop.Controllers
@@ -21,11 +24,14 @@ namespace e_shop.Controllers
         private readonly ILogger<HomeController> _logger;
         private Customerwebsite1Context db;
         private Customerwebsite1Context _context;
-        public HomeController(ILogger<HomeController> logger, Customerwebsite1Context context)
+        private readonly IConfiguration _configuration;
+      
+        public HomeController(ILogger<HomeController> logger, Customerwebsite1Context context, IConfiguration configuration)
         {
             _logger = logger;
             db = new Customerwebsite1Context();
             _context = context;
+            _configuration = configuration;
 
         }
         //for userpage
@@ -87,7 +93,7 @@ namespace e_shop.Controllers
                 return Redirect("/Home/Login");
             }
 
-            var newUser = new Customer
+            var newUser = new Models.Customer
             {
                 FullName = txtName,
                 Email = txtEmail,
@@ -216,7 +222,7 @@ namespace e_shop.Controllers
             if (string.IsNullOrEmpty(email))
                 return Unauthorized();
 
-            Customer? user = db.Customers.FirstOrDefault(x => x.Email == email);
+            var user = db.Customers.FirstOrDefault(x => x.Email == email);
             if (user == null)
                 return NotFound();
 
@@ -581,7 +587,7 @@ namespace e_shop.Controllers
         }
 
 
-        //CHECKOUT GET
+        // CHECKOUT GET
         [Authorize(AuthenticationSchemes = "MyCookieAuth", Roles = "User")]
         public IActionResult Checkout()
         {
@@ -607,10 +613,7 @@ namespace e_shop.Controllers
             return View(model);
         }
 
-
-
-        //CHECKOUT POST
-
+        // CHECKOUT POST
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(AuthenticationSchemes = "MyCookieAuth", Roles = "User")]
@@ -619,17 +622,16 @@ namespace e_shop.Controllers
             if (HomeController.CartData == null || !HomeController.CartData.Any())
             {
                 ModelState.AddModelError("", "Your cart is empty. Please add items before proceeding to payment.");
-                model.CartItems = new List<CartItem>(); // Ensure CartItems isn't null
+                model.CartItems = new List<CartItem>();
                 return View(model);
             }
 
             if (!ModelState.IsValid)
             {
-                model.CartItems = HomeController.CartData; // Reassign items
+                model.CartItems = HomeController.CartData;
                 return View(model);
             }
 
-            // Store values temporarily for use in the Payment step
             TempData["FullName"] = model.FullName;
             TempData["Email"] = model.Email;
             TempData["Phone"] = model.Phone;
@@ -638,98 +640,21 @@ namespace e_shop.Controllers
             return RedirectToAction("Payment");
         }
 
-
-
-        //FOR PLACING ORDER
-        public IActionResult PlaceOrder()
-        {
-            if (!CartData.Any())
-            {
-                TempData["Title"] = "Cart Empty";
-                TempData["Message"] = "Your cart is empty. Add items before placing an order.";
-                TempData["Icon"] = "warning";
-                return RedirectToAction("Cart");
-            }
-
-            // Simulate a logged-in customer (replace this with actual logic)
-            var user = db.Customers.FirstOrDefault(); // Replace with actual user tracking
-            if (user == null)
-            {
-                TempData["Title"] = "Error";
-                TempData["Message"] = "Customer not found. Please log in.";
-                TempData["Icon"] = "error";
-                return RedirectToAction("Login");
-            }
-
-            // Calculate total
-            decimal totalAmount = (decimal)CartData.Sum(item => item.product.Srice * item.quantity);
-
-            // Create Order
-            var order = new Order
-            {
-                CustomerFid = user.CustomerId,
-                OrderDate = DateTime.Now.Date,
-                Time = TimeOnly.FromDateTime(DateTime.Now),
-                TotalAmount = totalAmount,
-                Status = "Pending"
-            };
-
-            // Add order details
-            foreach (var item in CartData)
-            {
-                order.OrderDetails.Add(new OrderDetail
-                {
-                    ProductFid = item.product.ProductId,
-                    Quantity = item.quantity,
-                    UnitPrice = item.product.Srice
-                });
-            }
-
-            // Save to DB
-            db.Orders.Add(order);
-            db.SaveChanges();
-
-            // Clear Cart
-            CartData.Clear();
-
-            TempData["Title"] = "Order Placed";
-            TempData["Message"] = "Your order has been placed successfully!";
-            TempData["Icon"] = "success";
-
-            return RedirectToAction("Index");
-        }
-
-
-        //PAYMENT
+        // PAYMENT
         public IActionResult Payment()
         {
-            ViewBag.TotalAmount = CartData.Sum(i => i.product.Srice * i.quantity);
+            TempData.Keep(); // 🔁 Keep TempData for next steps
+            ViewBag.TotalAmount = CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity);
             return View();
         }
 
-
-
-        //CONFIRM ORDER BY PAYMENT METHOD
-
+        // CONFIRM ORDER
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ConfirmOrder(string PaymentMethod)
         {
-
-            // Handle payment logic
-            if (PaymentMethod == "CashOnDelivery")
-            {
-                // Handle COD
-            }
-            else if (PaymentMethod == "CardPayment")
-            {
-                // Redirect to card payment gateway or simulate
-            }
-            else if (PaymentMethod == "OnlineTransfer")
-            {
-                // Handle online transfer details (e.g., show account info)
-            }
-
+            TempData["PaymentMethod"] = PaymentMethod;
+            TempData.Keep(); // Keep all TempData keys
 
             if (CartData == null || !CartData.Any())
             {
@@ -737,33 +662,67 @@ namespace e_shop.Controllers
                 return RedirectToAction("Cart");
             }
 
-            string email = TempData["Email"]?.ToString();
+            if (PaymentMethod == "CashOnDelivery")
+            {
+                return RedirectToAction("PlaceOrderCOD");
+            }
+            else if (PaymentMethod == "CardPayment" || PaymentMethod == "OnlineTransfer")
+            {
+                return RedirectToAction("RazorpayPayment");
+            }
+
+            return RedirectToAction("Cart");
+        }
+
+        // PLACE ORDER - COD
+        public IActionResult PlaceOrderCOD()
+        {
+            if (!CartData.Any())
+            {
+                TempData["Message"] = "Cart is empty.";
+                return RedirectToAction("Cart");
+            }
+
+            string? email = TempData.Peek("Email")?.ToString();
             if (string.IsNullOrEmpty(email))
             {
-                TempData["Message"] = "Customer details missing.";
-                return RedirectToAction("Checkout");
+                TempData["Message"] = "Customer not found.";
+                return RedirectToAction("Login");
             }
 
             var customer = db.Customers.FirstOrDefault(c => c.Email == email);
             if (customer == null)
             {
-                customer = new Customer
+                customer = new e_shop.Models.Customer
                 {
-                    FullName = TempData["FullName"]?.ToString(),
+                    FullName = TempData.Peek("FullName")?.ToString(),
                     Email = email,
                     Role = "User"
                 };
+
                 db.Customers.Add(customer);
                 db.SaveChanges();
             }
+            else
+            {
+                string? fullName = TempData.Peek("FullName")?.ToString();
+                if (!string.IsNullOrWhiteSpace(fullName) && fullName != customer.FullName)
+                {
+                    customer.FullName = fullName;
+                    db.SaveChanges();
+                }
+            }
 
-            var order = new Order
+            decimal totalAmount = CartData.Sum(item => (item.product.Srice ?? 0) * item.quantity);
+
+            var order = new e_shop.Models.Order
             {
                 CustomerFid = customer.CustomerId,
-                OrderDate = DateTime.Now,
+                OrderDate = DateTime.Now.Date,
                 Time = TimeOnly.FromDateTime(DateTime.Now),
-                TotalAmount = CartData.Sum(i => i.product.Srice * i.quantity),
-                Status = "Paid"
+                TotalAmount = totalAmount,
+                Status = "Pending",
+                PaymentMethod = "CashOnDelivery"
             };
 
             foreach (var item in CartData)
@@ -778,13 +737,121 @@ namespace e_shop.Controllers
 
             db.Orders.Add(order);
             db.SaveChanges();
-
             CartData.Clear();
 
+            TempData["Message"] = "Your COD order has been placed!";
             return RedirectToAction("OrderConfirmation");
         }
 
-        //ORDER CONFIRMATION VIEW
+        // RAZORPAY PAYMENT GET
+        public IActionResult RazorpayPayment()
+        {
+            TempData.Keep();
+
+            if (CartData == null || !CartData.Any()) return RedirectToAction("Cart");
+
+            string? email = TempData.Peek("Email")?.ToString();
+            if (string.IsNullOrEmpty(email)) return RedirectToAction("Login");
+
+            try
+            {
+                // Force TLS 1.2 for HTTPS
+                System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+                // ✅ Replace with your actual Razorpay Test Key & Secret
+                RazorpayClient client = new RazorpayClient("rzp_test_yourkeyhere", "yoursecrethere");
+
+                Dictionary<string, object> options = new Dictionary<string, object>
+        {
+            { "amount", 1000 }, // ₹10.00
+            { "currency", "INR" },
+            { "receipt", Guid.NewGuid().ToString() },
+            { "payment_capture", 1 }
+        };
+
+                Razorpay.Api.Order razorpayOrder = client.Order.Create(options);
+
+                ViewBag.RazorpayOrderId = razorpayOrder["id"].ToString();
+                ViewBag.Amount = options["amount"];
+                ViewBag.Email = "test@example.com";
+                ViewBag.Contact = "9876543210";
+
+                return View("RazorpayPayment");
+            }
+            catch (Exception ex)
+            {
+                TempData["Message"] = "Razorpay API error: " + ex.Message;
+                return RedirectToAction("Payment");
+            }
+        }
+
+
+
+
+
+        
+
+        // CONFIRM RAZORPAY PAYMENT
+        public IActionResult ConfirmRazorpayPayment(string razorpay_payment_id, string razorpay_order_id)
+        {
+            TempData.Keep();
+
+            if (string.IsNullOrEmpty(razorpay_payment_id))
+            {
+                TempData["Message"] = "Payment failed or cancelled.";
+                return RedirectToAction("Cart");
+            }
+
+            string? email = TempData.Peek("Email")?.ToString();
+            if (string.IsNullOrEmpty(email))
+            {
+                TempData["Message"] = "Customer info missing.";
+                return RedirectToAction("Login");
+            }
+
+            var customer = db.Customers.FirstOrDefault(c => c.Email == email);
+            if (customer == null)
+            {
+                customer = new e_shop.Models.Customer
+                {
+                    FullName = TempData.Peek("FullName")?.ToString(),
+                    Email = email,
+                    Role = "User"
+                };
+
+                db.Customers.Add(customer);
+                db.SaveChanges();
+            }
+
+            var order = new e_shop.Models.Order
+            {
+                CustomerFid = customer.CustomerId,
+                OrderDate = DateTime.Now,
+                Time = TimeOnly.FromDateTime(DateTime.Now),
+                TotalAmount = CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity),
+                Status = "Paid",
+                PaymentMethod = "Razorpay"
+            };
+
+            foreach (var item in CartData)
+            {
+                order.OrderDetails.Add(new OrderDetail
+                {
+                    ProductFid = item.product.ProductId,
+                    Quantity = item.quantity,
+                    UnitPrice = item.product.Srice
+                });
+            }
+
+            db.Orders.Add(order);
+            db.SaveChanges();
+            CartData.Clear();
+
+            TempData["Message"] = "Payment successful. Order placed!";
+            return RedirectToAction("OrderConfirmation");
+        }
+
+        // ORDER CONFIRMATION
         public IActionResult OrderConfirmation()
         {
             return View();

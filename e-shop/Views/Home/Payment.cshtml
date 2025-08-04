@@ -1,26 +1,38 @@
-﻿@model e_shop.Models.ViewModel.CheckoutViewModel
-@{
-    ViewData["Title"] = "Payment";
+﻿@{
     Layout = "~/Views/Shared/_Layoutforallpage.cshtml";
+    ViewBag.Title = "Choose Payment Method";
+    decimal totalAmount = ViewBag.TotalAmount ?? 0;
 }
 
-<h2>Payment Page</h2>
+<div class="container py-5">
+    <h2 class="mb-4 text-center">Choose Your Payment Method</h2>
 
-<p>Total: <strong>@ViewBag.TotalAmount</strong></p>
+    <div class="card p-4 shadow mx-auto" style="max-width: 600px;">
+        <p><strong>Total Amount:</strong> @totalAmount.ToString("N2") AED</p>
 
-<form asp-action="ConfirmOrder" method="post">
-    <div>
-        <label><strong>Select Payment Method:</strong></label><br />
+        <form asp-action="ConfirmOrder" method="post">
+            @Html.AntiForgeryToken()
 
-        <input type="radio" id="cod" name="PaymentMethod" value="CashOnDelivery" checked />
-        <label for="cod">Cash on Delivery</label><br />
+            <div class="form-group">
+                <label>Select Payment Option</label>
 
-        <input type="radio" id="card" name="PaymentMethod" value="CardPayment" />
-        <label for="card">Card Payment</label><br />
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PaymentMethod" id="cod" value="CashOnDelivery" checked />
+                    <label class="form-check-label" for="cod">Cash on Delivery</label>
+                </div>
 
-        <input type="radio" id="online" name="PaymentMethod" value="OnlineTransfer" />
-        <label for="online">Online Transfer</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PaymentMethod" id="card" value="CardPayment" />
+                    <label class="form-check-label" for="card">Card Payment (Razorpay)</label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PaymentMethod" id="bank" value="OnlineTransfer" />
+                    <label class="form-check-label" for="bank">Bank Transfer</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Proceed to Payment</button>
+        </form>
     </div>
-
-    <button type="submit" class="btn btn-primary mt-3">Confirm Payment</button>
-</form>
+</div>
