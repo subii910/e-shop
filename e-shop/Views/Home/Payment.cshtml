@@ -14,25 +14,25 @@
             @Html.AntiForgeryToken()
 
             <div class="form-group">
-                <label>Select Payment Option</label>
+                <label class="mb-2"><strong>Select Payment Option</strong></label>
 
-                <div class="form-check">
+                <div class="form-check mb-2">
                     <input class="form-check-input" type="radio" name="PaymentMethod" id="cod" value="CashOnDelivery" checked />
-                    <label class="form-check-label" for="cod">Cash on Delivery</label>
+                    <label class="form-check-label" for="cod">Cash on Delivery (COD)</label>
                 </div>
 
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="PaymentMethod" id="card" value="CardPayment" />
-                    <label class="form-check-label" for="card">Card Payment (Razorpay)</label>
-                </div>
-
-                <div class="form-check">
+                <div class="form-check mb-2">
                     <input class="form-check-input" type="radio" name="PaymentMethod" id="bank" value="OnlineTransfer" />
-                    <label class="form-check-label" for="bank">Bank Transfer</label>
+                    <label class="form-check-label" for="bank">Bank Transfer (Manual)</label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PaymentMethod" id="stripe" value="Stripe" />
+                    <label class="form-check-label" for="stripe">Pay Online with Stripe</label>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary mt-3">Proceed to Payment</button>
+            <button type="submit" class="btn btn-primary mt-3 w-100">Proceed to Payment</button>
         </form>
     </div>
 </div>

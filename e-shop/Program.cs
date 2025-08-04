@@ -1,5 +1,6 @@
 using e_shop.Models;
 using Microsoft.EntityFrameworkCore;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddAuthentication("MyCookieAuth")
 
 builder.Services.AddAuthorization();
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+StripeConfiguration.ApiKey = "your_stripe_secret_key";
 
 
 var app = builder.Build();

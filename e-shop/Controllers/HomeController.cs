@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Razorpay.Api;
-using Razorpay.Api;
+using Stripe;
+using StripeCustomer = Stripe.Customer;
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
@@ -656,20 +656,21 @@ namespace e_shop.Controllers
             TempData["PaymentMethod"] = PaymentMethod;
             TempData.Keep(); // Keep all TempData keys
 
-            if (CartData == null || !CartData.Any())
-            {
-                TempData["Message"] = "Cart is empty.";
-                return RedirectToAction("Cart");
-            }
-
             if (PaymentMethod == "CashOnDelivery")
             {
                 return RedirectToAction("PlaceOrderCOD");
             }
-            else if (PaymentMethod == "CardPayment" || PaymentMethod == "OnlineTransfer")
+            else if (PaymentMethod == "OnlineTransfer")
             {
-                return RedirectToAction("RazorpayPayment");
+                // You can redirect to bank details or manual confirmation
+                return RedirectToAction("BankTransferInstructions");
             }
+            else if (PaymentMethod == "Stripe")
+            {
+                return RedirectToAction("StripePayment");
+            }
+
+
 
             return RedirectToAction("Cart");
         }
@@ -743,78 +744,60 @@ namespace e_shop.Controllers
             return RedirectToAction("OrderConfirmation");
         }
 
-        // RAZORPAY PAYMENT GET
-        public IActionResult RazorpayPayment()
+        // STRIPE PAYMENT GET
+        public IActionResult StripePayment()
         {
-            TempData.Keep();
+            decimal total = (decimal)CartData.Sum(i => i.product.Srice * i.quantity);
+            long amountInPaise = (long)(total * 100); // Stripe uses smallest currency unit
 
-            if (CartData == null || !CartData.Any()) return RedirectToAction("Cart");
-
-            string? email = TempData.Peek("Email")?.ToString();
-            if (string.IsNullOrEmpty(email)) return RedirectToAction("Login");
-
-            try
+            var options = new PaymentIntentCreateOptions
             {
-                // Force TLS 1.2 for HTTPS
-                System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                Amount = amountInPaise,
+                Currency = "inr",
+                AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                {
+                    Enabled = true,
+                },
+            };
 
-                // ✅ Replace with your actual Razorpay Test Key & Secret
-                RazorpayClient client = new RazorpayClient("rzp_test_yourkeyhere", "yoursecrethere");
+            var service = new PaymentIntentService();
+            var paymentIntent = service.Create(options);
 
-                Dictionary<string, object> options = new Dictionary<string, object>
-        {
-            { "amount", 1000 }, // ₹10.00
-            { "currency", "INR" },
-            { "receipt", Guid.NewGuid().ToString() },
-            { "payment_capture", 1 }
-        };
-
-                Razorpay.Api.Order razorpayOrder = client.Order.Create(options);
-
-                ViewBag.RazorpayOrderId = razorpayOrder["id"].ToString();
-                ViewBag.Amount = options["amount"];
-                ViewBag.Email = "test@example.com";
-                ViewBag.Contact = "9876543210";
-
-                return View("RazorpayPayment");
-            }
-            catch (Exception ex)
-            {
-                TempData["Message"] = "Razorpay API error: " + ex.Message;
-                return RedirectToAction("Payment");
-            }
+            ViewBag.ClientSecret = paymentIntent.ClientSecret;
+            ViewBag.Amount = total;
+            return View();
         }
 
 
 
 
-
-        
-
-        // CONFIRM RAZORPAY PAYMENT
-        public IActionResult ConfirmRazorpayPayment(string razorpay_payment_id, string razorpay_order_id)
+        // CONFIRM STRIPE PAYMENT
+        public IActionResult ConfirmStripePayment(string paymentIntentId)
         {
-            TempData.Keep();
+            var service = new PaymentIntentService();
+            var intent = service.Get(paymentIntentId);
 
-            if (string.IsNullOrEmpty(razorpay_payment_id))
+            if (intent.Status != "succeeded")
             {
-                TempData["Message"] = "Payment failed or cancelled.";
+                TempData["Message"] = "Payment not successful.";
                 return RedirectToAction("Cart");
             }
 
-            string? email = TempData.Peek("Email")?.ToString();
+            // Get customer data
+            string email = TempData["Email"]?.ToString();
             if (string.IsNullOrEmpty(email))
             {
-                TempData["Message"] = "Customer info missing.";
+                TempData["Message"] = "Customer email not found.";
                 return RedirectToAction("Login");
             }
 
             var customer = db.Customers.FirstOrDefault(c => c.Email == email);
+
             if (customer == null)
             {
                 customer = new e_shop.Models.Customer
                 {
-                    FullName = TempData.Peek("FullName")?.ToString(),
+                    FullName = TempData["FullName"]?.ToString(),
                     Email = email,
                     Role = "User"
                 };
@@ -823,14 +806,15 @@ namespace e_shop.Controllers
                 db.SaveChanges();
             }
 
-            var order = new e_shop.Models.Order
+            // Create order
+            var order = new Order
             {
                 CustomerFid = customer.CustomerId,
                 OrderDate = DateTime.Now,
                 Time = TimeOnly.FromDateTime(DateTime.Now),
-                TotalAmount = CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity),
+                TotalAmount = CartData.Sum(i => i.product.Srice * i.quantity),
                 Status = "Paid",
-                PaymentMethod = "Razorpay"
+                PaymentMethod = "Stripe"
             };
 
             foreach (var item in CartData)
@@ -847,9 +831,11 @@ namespace e_shop.Controllers
             db.SaveChanges();
             CartData.Clear();
 
-            TempData["Message"] = "Payment successful. Order placed!";
+            TempData["Message"] = "Your order has been placed via Stripe!";
             return RedirectToAction("OrderConfirmation");
         }
+
+
 
         // ORDER CONFIRMATION
         public IActionResult OrderConfirmation()

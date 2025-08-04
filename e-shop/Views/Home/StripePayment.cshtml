@@ -1,0 +1,29 @@
+﻿@{
+    ViewData["Title"] = "Stripe Payment";
+}
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<h2>Pay with Stripe</h2>
+
+<p>Total Amount: ₹@ViewBag.Amount</p>
+
+<button id="pay-button" class="btn btn-success">Pay Now</button>
+
+<script>
+    const stripe = Stripe("your_stripe_publishable_key");
+    const clientSecret = "@ViewBag.ClientSecret";
+
+    document.getElementById("pay-button").addEventListener("click", async () => {
+        const result = await stripe.confirmPayment({
+            elements: stripe.elements(),
+            confirmParams: {
+                return_url: "/Home/ConfirmStripePayment?paymentIntentId=" + clientSecret,
+            }
+        });
+
+        if (result.error) {
+            alert("Payment failed: " + result.error.message);
+        }
+    });
+</script>
