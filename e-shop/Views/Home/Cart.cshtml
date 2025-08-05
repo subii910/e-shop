@@ -52,9 +52,9 @@
                                     <img src="/DataFiles/products/@item.product.Image" alt="" style="width: 50px;" />
                                     @item.product.ProductName
                                 </td>
-                                <td class="align-middle">$@item.product.Srice</td>
+                                <td class="align-middle">(AED) @item.product.Srice</td>
                                 <td class="align-middle">@item.quantity</td>
-                                <td class="align-middle">$@(item.product.Srice* item.quantity)</td>
+                                <td class="align-middle">(AED) @(item.product.Srice* item.quantity)</td>
                                 <td class="align-middle">
                                     <a class="btn btn-sm btn-primary" href="/Home/Remove/@item.product.ProductId">
                                         <i class="fa fa-times"></i>
@@ -73,7 +73,7 @@
                 <div class="card-footer border-secondary bg-transparent">
                     <div class="d-flex justify-content-between mt-2">
                         <h5 class="font-weight-bold">Total</h5>
-                        <h5 class="font-weight-bold grand-total">$@prtotal</h5>
+                        <h5 class="font-weight-bold grand-total">(AED) @prtotal</h5>
                     </div>
                     <a href="/Home/Products">
                         <button class="btn btn-block btn-primary my-3 py-3">Continue Shopping</button>

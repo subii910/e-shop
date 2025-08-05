@@ -1,4 +1,5 @@
-﻿namespace e_shop.Models
+﻿using Newtonsoft.Json;
+namespace e_shop.Models
 {
     public class CartItem
     {

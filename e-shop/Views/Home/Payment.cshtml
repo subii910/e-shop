@@ -8,7 +8,7 @@
     <h2 class="mb-4 text-center">Choose Your Payment Method</h2>
 
     <div class="card p-4 shadow mx-auto" style="max-width: 600px;">
-        <p><strong>Total Amount:</strong> @totalAmount.ToString("N2") AED</p>
+        <p><strong>Total Amount:</strong> @totalAmount.ToString("N2") (AED)</p>
 
         <form asp-action="ConfirmOrder" method="post">
             @Html.AntiForgeryToken()
@@ -21,14 +21,11 @@
                     <label class="form-check-label" for="cod">Cash on Delivery (COD)</label>
                 </div>
 
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="radio" name="PaymentMethod" id="bank" value="OnlineTransfer" />
-                    <label class="form-check-label" for="bank">Bank Transfer (Manual)</label>
-                </div>
+            
 
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="PaymentMethod" id="stripe" value="Stripe" />
-                    <label class="form-check-label" for="stripe">Pay Online with Stripe</label>
+                    <label class="form-check-label" for="stripe">Card Payment</label>
                 </div>
             </div>
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace e_shop.Models;
@@ -26,7 +27,9 @@ public partial class Product
     public string? Details { get; set; }
 
     public string? Status { get; set; }
-
+    
+    [JsonIgnore]
+    
     public virtual Category? CategoryF { get; set; }
 
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();

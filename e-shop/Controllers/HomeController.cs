@@ -1,4 +1,5 @@
-﻿using e_shop.Models;
+﻿using e_shop.Helpers;
+using e_shop.Models;
 using e_shop.Models.ViewModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -21,7 +22,7 @@ namespace e_shop.Controllers
 {
     public class HomeController : Controller
     {
-        public static List<CartItem> CartData = new List<CartItem>();
+        //public static List<CartItem> CartData = new List<CartItem>();
 
         private readonly ILogger<HomeController> _logger;
         private Customerwebsite1Context db;
@@ -541,65 +542,65 @@ namespace e_shop.Controllers
         //CART VIEW
         public IActionResult Cart()
         {
-            return View(CartData);
+            var cart = CartCookieHelper.LoadCart(HttpContext);
+            return View(cart);
         }
+
 
 
         //ADDING TO CART
         public IActionResult AddToCart(int id)
         {
-
             var p = db.Products.Include(x => x.CategoryF).FirstOrDefault(x => x.ProductId == id);
+            var cart = CartCookieHelper.LoadCart(HttpContext);
 
-            if (CheckForExistingItem(id) == -1)
-            {
-                CartData.Add(new CartItem
-                {
-                    product = p,
-                    quantity = 1
-                });
-            }
+            var existing = cart.FirstOrDefault(x => x.product.ProductId == id);
+            if (existing == null)
+                cart.Add(new CartItem { product = p, quantity = 1 });
             else
-            {
-                CartData[CheckForExistingItem(id)].quantity++;
-            }
+                existing.quantity++;
 
-
+            CartCookieHelper.SaveCart(HttpContext, cart);
             return RedirectToAction("Cart");
         }
 
-        public ActionResult Remove(int id)
+
+        public IActionResult Remove(int id)
         {
-            if (CheckForExistingItem(id) != -1)
+            var cart = CartCookieHelper.LoadCart(HttpContext);
+            var item = cart.FirstOrDefault(x => x.product.ProductId == id);
+            if (item != null)
             {
-                CartData.RemoveAt(CheckForExistingItem(id));
+                cart.Remove(item);
+                CartCookieHelper.SaveCart(HttpContext, cart);
             }
             return RedirectToAction("Cart");
+        }
 
-        }
-        int CheckForExistingItem(int id)
-        {
-            int FoundIndex = -1;
-            for (int i = 0; i < CartData.Count; i++)
-            {
-                if (id == CartData[i].product.ProductId)
-                {
-                    FoundIndex = i;
-                }
-            }
-            return FoundIndex;
-        }
+        //int CheckForExistingItem(int id)
+        //{
+        //    int FoundIndex = -1;
+        //    for (int i = 0; i < CartData.Count; i++)
+        //    {
+        //        if (id == CartData[i].product.ProductId)
+        //        {
+        //            FoundIndex = i;
+        //        }
+        //    }
+        //    return FoundIndex;
+        //}
 
 
         // CHECKOUT GET
         [Authorize(AuthenticationSchemes = "MyCookieAuth", Roles = "User")]
         public IActionResult Checkout()
         {
-            var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var cart = CartCookieHelper.LoadCart(HttpContext);
 
             CheckoutViewModel model = new CheckoutViewModel
             {
-                CartItems = HomeController.CartData ?? new List<CartItem>()
+                CartItems = cart
             };
 
             if (!string.IsNullOrEmpty(userEmail))
@@ -617,13 +618,16 @@ namespace e_shop.Controllers
             return View(model);
         }
 
+
         // CHECKOUT POST
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(AuthenticationSchemes = "MyCookieAuth", Roles = "User")]
         public IActionResult Checkout(CheckoutViewModel model)
         {
-            if (HomeController.CartData == null || !HomeController.CartData.Any())
+            var cart = CartCookieHelper.LoadCart(HttpContext);
+
+            if (cart == null || !cart.Any())
             {
                 ModelState.AddModelError("", "Your cart is empty. Please add items before proceeding to payment.");
                 model.CartItems = new List<CartItem>();
@@ -632,7 +636,7 @@ namespace e_shop.Controllers
 
             if (!ModelState.IsValid)
             {
-                model.CartItems = HomeController.CartData;
+                model.CartItems = cart;
                 return View(model);
             }
 
@@ -644,13 +648,17 @@ namespace e_shop.Controllers
             return RedirectToAction("Payment");
         }
 
+
         // PAYMENT
         public IActionResult Payment()
         {
-            TempData.Keep(); // 🔁 Keep TempData for next steps
-            ViewBag.TotalAmount = CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity);
+            TempData.Keep();
+            var cart = CartCookieHelper.LoadCart(HttpContext);
+
+            ViewBag.TotalAmount = cart.Sum(i => (i.product.Srice ?? 0) * i.quantity);
             return View();
         }
+
 
         // CONFIRM ORDER
         [HttpPost]
@@ -664,11 +672,7 @@ namespace e_shop.Controllers
             {
                 return RedirectToAction("PlaceOrderCOD");
             }
-            else if (PaymentMethod == "OnlineTransfer")
-            {
-                // You can redirect to bank details or manual confirmation
-                return RedirectToAction("BankTransferInstructions");
-            }
+            
             else if (PaymentMethod == "Stripe")
             {
                 return RedirectToAction("StripePayment");
@@ -681,14 +685,15 @@ namespace e_shop.Controllers
         // PLACE ORDER - COD
         public IActionResult PlaceOrderCOD()
         {
-            if (!CartData.Any())
+            var cart = CartCookieHelper.LoadCart(HttpContext);
+
+            if (!cart.Any())
             {
                 TempData["Message"] = "Cart is empty.";
                 return RedirectToAction("Cart");
             }
 
             TempData.Keep();
-
             string? email = TempData.Peek("Email")?.ToString();
             if (string.IsNullOrEmpty(email))
             {
@@ -705,21 +710,11 @@ namespace e_shop.Controllers
                     Email = email,
                     Role = "User"
                 };
-
                 db.Customers.Add(customer);
                 db.SaveChanges();
             }
-            else
-            {
-                string? fullName = TempData.Peek("FullName")?.ToString();
-                if (!string.IsNullOrWhiteSpace(fullName) && fullName != customer.FullName)
-                {
-                    customer.FullName = fullName;
-                    db.SaveChanges();
-                }
-            }
 
-            decimal totalAmount = CartData.Sum(item => (item.product.Srice ?? 0) * item.quantity);
+            decimal totalAmount = cart.Sum(item => (item.product.Srice ?? 0) * item.quantity);
 
             var order = new e_shop.Models.Order
             {
@@ -731,7 +726,7 @@ namespace e_shop.Controllers
                 PaymentMethod = "CashOnDelivery"
             };
 
-            foreach (var item in CartData)
+            foreach (var item in cart)
             {
                 order.OrderDetails.Add(new OrderDetail
                 {
@@ -743,11 +738,13 @@ namespace e_shop.Controllers
 
             db.Orders.Add(order);
             db.SaveChanges();
-            CartData.Clear();
+            CartCookieHelper.ClearCart(HttpContext);
 
             TempData["Message"] = "Your COD order has been placed!";
             return RedirectToAction("OrderConfirmation");
         }
+
+
 
 
         // STRIPE PAYMENT GET
@@ -755,27 +752,27 @@ namespace e_shop.Controllers
         public IActionResult StripePayment()
         {
             TempData.Keep();
+            var cart = CartCookieHelper.LoadCart(HttpContext);
 
-            if (!CartData.Any())
+            if (!cart.Any())
             {
                 TempData["Message"] = "Cart is empty.";
                 return RedirectToAction("Cart");
             }
 
-            decimal total = (decimal)CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity);
-            long amountInSmallestUnit = (long)(total * 100); // AED/INR: 100 fils/paise = 1 unit
+            decimal total = (decimal)cart.Sum(i => (i.product.Srice ?? 0) * i.quantity);
+            long amountInSmallestUnit = (long)(total * 100);
 
-            // Optional: Validate amount against Stripe minimums
-            if (amountInSmallestUnit < 100)
+            if (amountInSmallestUnit < 200) // Stripe minimum in AED is ~2.00
             {
-                TempData["Message"] = "Total must be at least AED/INR 1.00 for Stripe payment.";
+                TempData["Message"] = "Stripe payments require a minimum total of AED 2.00.";
                 return RedirectToAction("Cart");
             }
 
             var options = new PaymentIntentCreateOptions
             {
                 Amount = amountInSmallestUnit,
-                Currency = "aed", // or "inr" depending on your business
+                Currency = "aed",
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
                 {
                     Enabled = true,
@@ -787,22 +784,19 @@ namespace e_shop.Controllers
 
             ViewBag.ClientSecret = paymentIntent.ClientSecret;
             ViewBag.Amount = total;
-            ViewBag.PublishableKey = "pk_test_51RsOPRBRjkkGDzT6vEPYBXPvMcrW7yiRCtWZ8zGVSlY0de8IiYzTy1ALnsP5nbxO3AwvAJDIkMtnNSMPY2kH3TSP008vc2frIn";
-            return View(); // Ensure you have a matching StripePayment.cshtml view
+            ViewBag.PublishableKey = _stripeSettings.PublishableKey;
+            return View();
         }
 
 
         // CONFIRM STRIPE PAYMENT
         public IActionResult ConfirmStripePayment([FromQuery(Name = "payment_intent")] string paymentIntentId)
-
         {
             System.Diagnostics.Debug.WriteLine("✅ ConfirmStripePayment HIT");
 
             TempData.Keep();
-
             var service = new PaymentIntentService();
             var intent = service.Get(paymentIntentId);
-            System.Diagnostics.Debug.WriteLine("💳 Payment status: " + intent.Status);
 
             if (intent.Status != "succeeded")
             {
@@ -826,31 +820,23 @@ namespace e_shop.Controllers
                     Email = email,
                     Role = "User"
                 };
-
                 db.Customers.Add(customer);
                 db.SaveChanges();
             }
-            else
-            {
-                string? fullName = TempData.Peek("FullName")?.ToString();
-                if (!string.IsNullOrWhiteSpace(fullName) && fullName != customer.FullName)
-                {
-                    customer.FullName = fullName;
-                    db.SaveChanges();
-                }
-            }
+
+            var cart = CartCookieHelper.LoadCart(HttpContext);
 
             var order = new e_shop.Models.Order
             {
                 CustomerFid = customer.CustomerId,
                 OrderDate = DateTime.Now.Date,
                 Time = TimeOnly.FromDateTime(DateTime.Now),
-                TotalAmount = CartData.Sum(i => (i.product.Srice ?? 0) * i.quantity),
+                TotalAmount = cart.Sum(i => (i.product.Srice ?? 0) * i.quantity),
                 Status = "Paid",
                 PaymentMethod = "Stripe"
             };
 
-            foreach (var item in CartData)
+            foreach (var item in cart)
             {
                 order.OrderDetails.Add(new OrderDetail
                 {
@@ -862,12 +848,12 @@ namespace e_shop.Controllers
 
             db.Orders.Add(order);
             db.SaveChanges();
-            CartData.Clear();
+            CartCookieHelper.ClearCart(HttpContext);
 
             TempData["Message"] = "Payment successful. Order placed!";
             return RedirectToAction("OrderConfirmation");
-
         }
+
 
 
         // ORDER CONFIRMATION
